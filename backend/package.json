@@ -1,1 +1,16 @@
-{ }
+{
+    "name": "backend",
+    "version": "1.0.0",
+    "description": "Node.js server that handles API routes, video downloads, and processing.",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "type": "commonjs",
+    "dependencies": {
+        "express": "^5.1.0"
+    }
+}
