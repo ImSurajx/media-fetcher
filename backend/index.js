@@ -1,10 +1,10 @@
 // Main backend server entry: sets up Express and API routes.
 
 /*
- - Entry point for the backend server.
- - Creates the Express app and registers all routes + middleware.
- - This file runs first when the backend starts.
-*/
+ * Entry point for the backend server.
+ * Creates the Express app and registers all routes + middleware.
+ * This file runs first when the backend starts.
+ */
 
 // Importing Express framework to create the HTTP server
 const express = require("express");

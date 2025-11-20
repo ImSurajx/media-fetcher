@@ -1,10 +1,10 @@
 // Handles incoming incoming requests and communicates with ytdlpService
 
 /*
-- Controllers for handling media download and info extraction requests.
-- Recives data from routes, validates it, and passes tasks to service layer.
-- Sends formatted response back to the client.
-*/
+ * Controllers for handling media download and info extraction requests.
+ * Recives data from routes, validates it, and passes tasks to service layer.
+ * Sends formatted response back to the client.
+ */
 
 // Importing yt-dlp service which performs heavy processing.
 const ytdlpService = require("../services/ytdlpService");
