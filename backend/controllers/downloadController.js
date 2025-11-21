@@ -10,17 +10,41 @@
 const ytdlpService = require("../services/ytdlpService");
 
 // Controller: Returns media information such as title, format & qualities.
-const getInfo = (req, res) => {
-    // Step 1: Extract URL from the request.
-    // Step 2: Validate URL.
-    // Step 3: Ask service to fetch info.
-    // Step 4: Send info back to the client.
+const getInfo = async(req, res) => {
+    try {
+        // Step 1: Extract URL + selected format.
+        const { url } = req.body;
+
+        // Step 2: Validate input.
+        if (!url) {
+            return res.status(400).json({
+                sucess: false,
+                message: "URL is required."
+            });
+        };
+
+        // Step 3: Ask service to fetch info.
+        const info = await ytdlpService.fetchInfo(url);
+        
+        // Step 4: Send info back to the client.
+        return res.status(200).json({
+            sucess: true,
+            data: info
+        });
+    } catch (error){
+        // Step 5: Hanle error
+        return res.status(500).json({
+            sucess: false,
+            message: "Failed to fetch info",
+            error: error.message
+        });
+    }
 };
 
 // Controller: Starts the media download process using yt-dlp.
 const startDownload = (req, res) => {
-    // Step 1: Extract URL + selected format.
-    // Step 2: Validate input.
+
+
     // Step 3: Ask service to download file.
     // Step 4: Return success + file path / buffer.
 }
