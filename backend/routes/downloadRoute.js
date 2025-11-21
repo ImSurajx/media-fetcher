@@ -16,7 +16,7 @@ const downloadController = require("../controllers/downloadController");
 router.post("/info", downloadController.getInfo);
 
 // Route for downloading media using yt-dlp
-router.post("/download", downloadController.startDownload);
+router.get("/file", downloadController.startDownload);
 
 // Exporting router so index.js can use it
 module.exports = router;
