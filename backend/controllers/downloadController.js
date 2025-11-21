@@ -12,13 +12,13 @@ const ytdlpService = require("../services/ytdlpService");
 // Controller: Returns media information such as title, format & qualities.
 const getInfo = async(req, res) => {
     try {
-        // Step 1: Extract URL + selected format.
+        // Step 1: Extract URL from the request body.
         const { url } = req.body;
 
         // Step 2: Validate input.
         if (!url) {
             return res.status(400).json({
-                sucess: false,
+                success: false,
                 message: "URL is required."
             });
         };
@@ -28,13 +28,13 @@ const getInfo = async(req, res) => {
         
         // Step 4: Send info back to the client.
         return res.status(200).json({
-            sucess: true,
+            success: true,
             data: info
         });
     } catch (error){
         // Step 5: Hanle error
         return res.status(500).json({
-            sucess: false,
+            success: false,
             message: "Failed to fetch info",
             error: error.message
         });
