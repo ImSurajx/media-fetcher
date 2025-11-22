@@ -43,34 +43,40 @@ const getInfo = async (req, res) => {
 
 // Controller: Starts the media download process using yt-dlp.
 const startDownload = async (req, res) => {
+    console.log("startDownload CALLED!");
+
     try {
-        // Step 1: Extract URL and format from query params.
         const { url, format } = req.query;
 
-        // Step 2: Validate inputs.
         if (!url || !format) {
             return res.status(400).json({
                 success: false,
                 message: "URL and format are required."
-            });
+            })
         }
 
-        // Step 3: Ask service to start stream download.
+        // Call your service function.
         const stream = ytdlpService.downloadStream(url, format);
 
-        // Step 4: Set correct header for browser download.
-        res.setHeader("Content-Disposition", "attachment");
-        res.setHeader("Content-Type", "application/octet-stream");
+        // Tell browser: this is a video file.
+        res.setHeader("Content-Type", "video/mp4");
+        res.setHeader("Content-Disposition", "attachment; filename=video.mp4");
 
-        // Step 5: Pipe yt-dlp output directly to browser.
+        // Pipe stream to browser
         stream.stdout.pipe(res);
+
+        // Log error stream also
+        stream.stderr.on("data", (data) => {
+            console.log("yt-dlp ERROR (controller)", data.toString());
+        });
     } catch (error) {
         return res.status(500).json({
             success: false,
-            message: "Failed to download media.",
-            error: error.message
+            message: "Failed to download media",
+            error: error.message,
         });
     }
+
 }
 
 // Exporting controller functions so routes can use them
