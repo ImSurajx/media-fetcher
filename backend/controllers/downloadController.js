@@ -6,9 +6,12 @@
  * Sends formatted response back to the client.
  */
 
+
 // Importing yt-dlp service which performs heavy processing.
 const ytdlpService = require("../services/ytdlpService");
 const { parseFormats } = require("../utils/formatParser");
+
+
 
 // Controller: Returns media information such as title, format & qualities.
 const getInfo = async (req, res) => {
@@ -26,6 +29,11 @@ const getInfo = async (req, res) => {
 
         // Step 3: Ask service to fetch info.
         const info = await ytdlpService.fetchInfo(url);
+
+        // temporary test log for audio picker
+        const audioCandidate = ytdlpService.pickBestAudioId(info.formats);
+        console.log("DEBUG: pickBestAudioId ->", audioCandidate);
+        
         const cleanedFormats = parseFormats(info.formats);
 
         // Step 4: Send info back to the client.

@@ -35,6 +35,24 @@ const fetchInfo = (url) => {
     })
 }
 
+// Choose best audio format id from raw yt-dlp formats
+const pickBestAudioId = (formats) => {
+    if(!Array.isArray(formats)) return null;
+
+    // prefer known good audio format ids (common on YouTube)
+    const preferred = ["140", "251", "250", "249", "139"];
+    for(const id of preferred){
+        const found = formats.find(f => String(f.format_id) === id && f.acodec && f.acodec !== "none");
+        if(found) return found.format_id;
+    }
+
+    // fallback: choose audio format with highest abr
+    const audioFormats = formats.filter(f => f.acodec && f.acodec !== "none");
+    if(audioFormats.length === 0) return null;
+    audioFormats.sort((a,b) => (b.abr || 0) - (a.abr || 0));
+    return audioFormats[0].format_id;
+};
+
 // Function: Stream media directly using yt-dlp.
 // Uses spawn because video data is large and stream chunk-by-chunk
 const downloadStream = (url, format) => {
@@ -59,5 +77,6 @@ const downloadStream = (url, format) => {
 
 module.exports = {
     fetchInfo,
-    downloadStream
+    downloadStream,
+    pickBestAudioId
 };

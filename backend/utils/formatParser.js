@@ -1,5 +1,4 @@
 // This file clean and organize yt-dlp formats into user-friendly structure.
-console.log("parseFormats LOADED FROM:", __filename);
 function parseFormats(rawFormats) {
     const progressive = [];
     const videoOnly = [];
