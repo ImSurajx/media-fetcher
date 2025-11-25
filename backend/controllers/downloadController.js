@@ -8,6 +8,7 @@
 
 // Importing yt-dlp service which performs heavy processing.
 const ytdlpService = require("../services/ytdlpService");
+const { parseFormats } = require("../utils/formatParser");
 
 // Controller: Returns media information such as title, format & qualities.
 const getInfo = async (req, res) => {
@@ -25,11 +26,15 @@ const getInfo = async (req, res) => {
 
         // Step 3: Ask service to fetch info.
         const info = await ytdlpService.fetchInfo(url);
+        const cleanedFormats = parseFormats(info.formats);
 
         // Step 4: Send info back to the client.
         return res.status(200).json({
             success: true,
-            data: info
+            title: info.title,
+            thumbnail: info.thumbnail,
+            duration: info.duration,
+            formats: cleanedFormats,
         });
     } catch (error) {
         // Step 5: Hanle error
