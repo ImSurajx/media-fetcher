@@ -57,10 +57,13 @@ const getInfo = async (req, res) => {
 // Controller: Starts the media download process using yt-dlp.
 const startDownload = async (req, res) => {
     console.log("startDownload CALLED!");
-
     try {
         const { url, format } = req.query;
-
+        const info = await ytdlpService.fetchInfo(url);
+        const bestAudio = ytdlpService.pickBestAudioId(info.formats);
+        const finalFormat = `${format}+${bestAudio}`;
+        console.log("Final Merge Format => ", finalFormat);
+        
         if (!url || !format) {
             return res.status(400).json({
                 success: false,
@@ -69,7 +72,7 @@ const startDownload = async (req, res) => {
         }
 
         // Call your service function.
-        const stream = ytdlpService.downloadStream(url, format);
+        const stream = ytdlpService.downloadStream(url, finalFormat);
 
         // Tell browser: this is a video file.
         res.setHeader("Content-Type", "video/mp4");

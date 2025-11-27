@@ -7,7 +7,18 @@
  */
 
 // Importing exec from Node's child_process module
-const {exec, spawn} = require("child_process");
+const { exec, spawn } = require("child_process");
+const path = require("path");
+const getYtDlpCommand = () => {
+    const binDir = path.join(__dirname, "..", "bin");
+
+    if (process.platform === "win32") {
+        return path.join(binDir, "yt-dlp.exe");
+    }
+
+    // macOS + Linux
+    return path.join(binDir, "yt-dlp");
+}
 
 // Function to fetch media information from yt-dlp
 const fetchInfo = (url) => {
@@ -18,18 +29,17 @@ const fetchInfo = (url) => {
         // Step 2: Execute the command
         exec(command, (error, stdout, stderr) => {
             // if yt-dlp gives any error -> reject the promise.
-            if(error) {
+            if (error) {
                 return reject(error)
             }
-            try 
-            {
+            try {
                 // Step 3: Parse the json output from yt-dlp.
                 const info = JSON.parse(stdout);
 
                 // Step 4: Resolve the promise with parsed info.
                 resolve(info);
-            } catch(parseError){
-                reject (parseError);
+            } catch (parseError) {
+                reject(parseError);
             }
         });
     })
@@ -37,19 +47,19 @@ const fetchInfo = (url) => {
 
 // Choose best audio format id from raw yt-dlp formats
 const pickBestAudioId = (formats) => {
-    if(!Array.isArray(formats)) return null;
+    if (!Array.isArray(formats)) return null;
 
     // prefer known good audio format ids (common on YouTube)
     const preferred = ["140", "251", "250", "249", "139"];
-    for(const id of preferred){
+    for (const id of preferred) {
         const found = formats.find(f => String(f.format_id) === id && f.acodec && f.acodec !== "none");
-        if(found) return found.format_id;
+        if (found) return found.format_id;
     }
 
     // fallback: choose audio format with highest abr
     const audioFormats = formats.filter(f => f.acodec && f.acodec !== "none");
-    if(audioFormats.length === 0) return null;
-    audioFormats.sort((a,b) => (b.abr || 0) - (a.abr || 0));
+    if (audioFormats.length === 0) return null;
+    audioFormats.sort((a, b) => (b.abr || 0) - (a.abr || 0));
     return audioFormats[0].format_id;
 };
 
@@ -63,13 +73,14 @@ const downloadStream = (url, format) => {
         url                 // video URL
     ];
 
-    const process = spawn("yt-dlp", args);
+    const ytDlpCmd = getYtDlpCommand();
+    const process = spawn(ytDlpCmd, args);
 
     // Debug log
-    process.stdout.on("data", (data)=>{
+    process.stdout.on("data", (data) => {
         console.log("yt-dlp CHUNK:", data.length, "bytes");
     });
-    process.stderr.on("data", (data)=>{
+    process.stderr.on("data", (data) => {
         console.log("yt-dlp ERROR:", data.toString());
     });
     return process;
