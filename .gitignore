@@ -1,4 +1,50 @@
+# Node modules
 node_modules/
-temp/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# Temp and cache
+dist/
+build/
+.cache/
+.tmp/
+temp/
+*.tmp
+
+# Bin folder (yt-dlp)
 bin/
+bin/*
+
+# Editor settings
+.vscode/
+.idea/
+
+# Generated files
+*.pid
+*.seed
+*.pid.lock
+
+# Uploaded/downloaded temporary files
+downloads/
+temp/
+
+# TypeScript build (if added later)
+*.tsbuildinfo
+
+# Coverage (if you use Jest later)
+coverage/
