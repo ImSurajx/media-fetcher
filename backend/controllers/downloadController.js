@@ -57,18 +57,20 @@ const startDownload = async (req, res) => {
             });
         }
 
-        res.setHeader("Content-Type", "video/mp4");
-        res.setHeader(
-            "Content-Disposition",
-            `attachment; filename="mediafetcher-download.mp4"`
-        );
+        res.setHeader("Content-Type", "video/x-matroska");
+        res.setHeader("Content-Disposition", "attachment; filename=video.mkv");
 
         let process;
 
         if (type === "progressive") {
             process = ytdlpService.createProgressiveStream(url, formatId);
-        } else {
+        } else if (type === "merged") {
             process = await ytdlpService.createMergedStream(url, formatId);
+        } else {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid type. Must be 'progressive' or 'merged'"
+            });
         }
 
         process.stdout.pipe(res);

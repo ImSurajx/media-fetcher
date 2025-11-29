@@ -98,19 +98,19 @@ const createMergedStream = async (url, videoFormatId) => {
         url
     ]);
 
-    const audioProc = spawn(ytDlpCmd, [
+    const audioProc = spawn(ytDlpCmd, [        
         "-f", audioFormatId,
         "-o", "-",
         url
     ]);
 
     const ffmpeg = spawn(ffmpegCmd, [
-        "-i", "pipe:3",
-        "-i", "pipe:4",
-        "-c:v", "copy",
-        "-c:a", "aac",
-        "-f", "mp4",
-        "pipe:1",
+        "-i", "pipe:3",     // video input
+        "-i", "pipe:4",     // audio input
+        "-c:v", "copy",     // no video re-encode
+        "-c:a", "aac",      // keep audio AAC
+        "-f", "matroska",   // OUTPUT FORMAT → MKV (stream-friendly)
+        "pipe:1"            // send to browser
     ], {
         stdio: ["pipe", "pipe", "pipe", "pipe", "pipe"]
     });
