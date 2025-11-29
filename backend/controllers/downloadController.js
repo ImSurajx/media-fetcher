@@ -1,42 +1,30 @@
-// Handles incoming incoming requests and communicates with ytdlpService
+// Handles incoming requests and communicates with ytdlpService
 
 /*
  * Controllers for handling media download and info extraction requests.
- * Recives data from routes, validates it, and passes tasks to service layer.
+ * Receives data from routes, validates it, and passes tasks to service layer.
  * Sends formatted response back to the client.
  */
 
-
-// Importing yt-dlp service which performs heavy processing.
 const ytdlpService = require("../services/ytdlpService");
 const { parseFormats } = require("../utils/formatParser");
 
 
-
-// Controller: Returns media information such as title, format & qualities.
+// Controller: Returns media information such as title, formats & qualities.
 const getInfo = async (req, res) => {
     try {
-        // Step 1: Extract URL from the request body.
         const { url } = req.body;
 
-        // Step 2: Validate input.
         if (!url) {
             return res.status(400).json({
                 success: false,
                 message: "URL is required."
             });
-        };
+        }
 
-        // Step 3: Ask service to fetch info.
         const info = await ytdlpService.fetchInfo(url);
-
-        // temporary test log for audio picker
-        const audioCandidate = ytdlpService.pickBestAudioId(info.formats);
-        console.log("DEBUG: pickBestAudioId ->", audioCandidate);
-        
         const cleanedFormats = parseFormats(info.formats);
 
-        // Step 4: Send info back to the client.
         return res.status(200).json({
             success: true,
             title: info.title,
@@ -44,8 +32,8 @@ const getInfo = async (req, res) => {
             duration: info.duration,
             formats: cleanedFormats,
         });
+
     } catch (error) {
-        // Step 5: Hanle error
         return res.status(500).json({
             success: false,
             message: "Failed to fetch info",
@@ -54,37 +42,41 @@ const getInfo = async (req, res) => {
     }
 };
 
-// Controller: Starts the media download process using yt-dlp.
+
+// Controller: Starts the media download process (progressive or merged)
 const startDownload = async (req, res) => {
-    console.log("startDownload CALLED!");
+    console.log("startDownload CALLED");
+
     try {
-        const { url, format } = req.query;
-        const info = await ytdlpService.fetchInfo(url);
-        const bestAudio = ytdlpService.pickBestAudioId(info.formats);
-        const finalFormat = `${format}+${bestAudio}`;
-        console.log("Final Merge Format => ", finalFormat);
-        
-        if (!url || !format) {
+        const { url, formatId, type } = req.query;
+
+        if (!url || !formatId) {
             return res.status(400).json({
                 success: false,
-                message: "URL and format are required."
-            })
+                message: "URL and formatId are required."
+            });
         }
 
-        // Call your service function.
-        const stream = ytdlpService.downloadStream(url, finalFormat);
-
-        // Tell browser: this is a video file.
         res.setHeader("Content-Type", "video/mp4");
-        res.setHeader("Content-Disposition", "attachment; filename=video.mp4");
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="mediafetcher-download.mp4"`
+        );
 
-        // Pipe stream to browser
-        stream.stdout.pipe(res);
+        let process;
 
-        // Log error stream also
-        stream.stderr.on("data", (data) => {
-            console.log("yt-dlp ERROR (controller)", data.toString());
+        if (type === "progressive") {
+            process = ytdlpService.createProgressiveStream(url, formatId);
+        } else {
+            process = await ytdlpService.createMergedStream(url, formatId);
+        }
+
+        process.stdout.pipe(res);
+
+        process.stderr.on("data", (data) => {
+            console.log("DOWNLOAD ENGINE ERROR:", data.toString());
         });
+
     } catch (error) {
         return res.status(500).json({
             success: false,
@@ -92,10 +84,9 @@ const startDownload = async (req, res) => {
             error: error.message,
         });
     }
+};
 
-}
 
-// Exporting controller functions so routes can use them
 module.exports = {
     getInfo,
     startDownload

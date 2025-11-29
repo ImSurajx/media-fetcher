@@ -6,9 +6,10 @@
  * Returns processed results back to the controller.
  */
 
-// Importing exec from Node's child_process module
 const { exec, spawn } = require("child_process");
 const path = require("path");
+
+// Detect correct YtDlp command for OS
 const getYtDlpCommand = () => {
     const binDir = path.join(__dirname, "..", "bin");
 
@@ -16,78 +17,150 @@ const getYtDlpCommand = () => {
         return path.join(binDir, "yt-dlp.exe");
     }
 
-    // macOS + Linux
-    return path.join(binDir, "yt-dlp");
-}
+    return path.join(binDir, "yt-dlp"); // macOS + Linux
+};
 
-// Function to fetch media information from yt-dlp
+// Detect correct ffmpeg command for OS
+const getFfmpegCommand = () => {
+    if (process.platform === "win32") return "ffmpeg.exe";
+    return "ffmpeg";
+};
+
+// Fetch media info using yt-dlp
 const fetchInfo = (url) => {
     return new Promise((resolve, reject) => {
-        // Step 1: Create a command for yt-dlp to fetch info.
         const command = `yt-dlp --dump-json "${url}"`;
 
-        // Step 2: Execute the command
-        exec(command, (error, stdout, stderr) => {
-            // if yt-dlp gives any error -> reject the promise.
-            if (error) {
-                return reject(error)
-            }
-            try {
-                // Step 3: Parse the json output from yt-dlp.
-                const info = JSON.parse(stdout);
+        exec(command, (error, stdout) => {
+            if (error) return reject(error);
 
-                // Step 4: Resolve the promise with parsed info.
+            try {
+                const info = JSON.parse(stdout);
                 resolve(info);
             } catch (parseError) {
                 reject(parseError);
             }
         });
-    })
-}
+    });
+};
 
-// Choose best audio format id from raw yt-dlp formats
+// Pick best audio ID
 const pickBestAudioId = (formats) => {
     if (!Array.isArray(formats)) return null;
 
-    // prefer known good audio format ids (common on YouTube)
     const preferred = ["140", "251", "250", "249", "139"];
+
     for (const id of preferred) {
         const found = formats.find(f => String(f.format_id) === id && f.acodec && f.acodec !== "none");
         if (found) return found.format_id;
     }
 
-    // fallback: choose audio format with highest abr
     const audioFormats = formats.filter(f => f.acodec && f.acodec !== "none");
     if (audioFormats.length === 0) return null;
+
     audioFormats.sort((a, b) => (b.abr || 0) - (a.abr || 0));
     return audioFormats[0].format_id;
 };
 
-// Function: Stream media directly using yt-dlp.
-// Uses spawn because video data is large and stream chunk-by-chunk
-const downloadStream = (url, format) => {
+// Progressive stream engine
+const createProgressiveStream = (url, formatId) => {
+    const ytDlpCmd = getYtDlpCommand();
+
     const args = [
-        "-f", format,       // select format (18 recommended)
-        "--no-playlist",    // avoid playlist downloads
-        "-o", "-",          // output to stdout (stream)
-        url                 // video URL
+        "-f", formatId,
+        "--no-playlist",
+        "-o", "-",
+        url
     ];
 
-    const ytDlpCmd = getYtDlpCommand();
-    const process = spawn(ytDlpCmd, args);
+    const proc = spawn(ytDlpCmd, args);
 
-    // Debug log
-    process.stdout.on("data", (data) => {
+    proc.stderr.on("data", (d) => {
+        console.log("yt-dlp (progressive) ERROR:", d.toString());
+    });
+
+    return proc;
+};
+
+// Merge video-only + best audio using ffmpeg
+const createMergedStream = async (url, videoFormatId) => {
+    const info = await fetchInfo(url);
+    const audioFormatId = pickBestAudioId(info.formats);
+
+    if (!audioFormatId) throw new Error("No suitable audio format found.");
+
+    const ytDlpCmd = getYtDlpCommand();
+    const ffmpegCmd = getFfmpegCommand();
+
+    const videoProc = spawn(ytDlpCmd, [
+        "-f", videoFormatId,
+        "-o", "-",
+        url
+    ]);
+
+    const audioProc = spawn(ytDlpCmd, [
+        "-f", audioFormatId,
+        "-o", "-",
+        url
+    ]);
+
+    const ffmpeg = spawn(ffmpegCmd, [
+        "-i", "pipe:3",
+        "-i", "pipe:4",
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-f", "mp4",
+        "pipe:1",
+    ], {
+        stdio: ["pipe", "pipe", "pipe", "pipe", "pipe"]
+    });
+
+    videoProc.stdout.pipe(ffmpeg.stdio[3]);
+    audioProc.stdout.pipe(ffmpeg.stdio[4]);
+
+    videoProc.stderr.on("data", (d) =>
+        console.log("yt-dlp VIDEO ERROR:", d.toString())
+    );
+
+    audioProc.stderr.on("data", (d) =>
+        console.log("yt-dlp AUDIO ERROR:", d.toString())
+    );
+
+    ffmpeg.stderr.on("data", (d) =>
+        console.log("FFMPEG ERROR:", d.toString())
+    );
+
+    return ffmpeg;
+};
+
+// Old direct stream
+const downloadStream = (url, format) => {
+    const ytDlpCmd = getYtDlpCommand();
+
+    const args = [
+        "-f", format,
+        "--no-playlist",
+        "-o", "-",
+        url
+    ];
+
+    const proc = spawn(ytDlpCmd, args);
+
+    proc.stdout.on("data", (data) => {
         console.log("yt-dlp CHUNK:", data.length, "bytes");
     });
-    process.stderr.on("data", (data) => {
+
+    proc.stderr.on("data", (data) => {
         console.log("yt-dlp ERROR:", data.toString());
     });
-    return process;
-}
+
+    return proc;
+};
 
 module.exports = {
     fetchInfo,
-    downloadStream,
-    pickBestAudioId
+    pickBestAudioId,
+    createProgressiveStream,
+    createMergedStream,
+    downloadStream
 };
